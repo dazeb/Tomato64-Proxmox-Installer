@@ -18,8 +18,8 @@ if qm status "$ID" &>/dev/null; then
     exit 1
 fi
 
-# Create a new VM with the specified parameters
-qm create "$ID" --name 'Tomato64' --memory 2048 --cores 2 --net0 "virtio,bridge=vmbr0" --bios ovmf --ostype l26
+# Create a new VM with the specified parameters and set VirtIO SCSI Single as the SCSI controller
+qm create "$ID" --name 'Tomato64' --memory 2048 --cores 2 --net0 "virtio,bridge=vmbr0" --bios ovmf --ostype l26 --scsihw virtio-scsi-single
 
 # Fetch the latest release data from GitHub
 latest_release_data=$(curl -s "https://api.github.com/repos/tomato64/tomato64/releases/latest")
@@ -55,7 +55,7 @@ if [ -z "$DISK_VOLUME_ID" ]; then
     exit 1
 fi
 
-# Set VM disk
+# Set VM disk with the VirtIO SCSI Single controller
 qm set "$ID" --scsi0 "${STORAGE}:${DISK_VOLUME_ID}"
 
 # Create an EFI disk for the VM using the special syntax
