@@ -27,15 +27,21 @@ latest_release_data=$(curl -s "https://api.github.com/repos/tomato64/tomato64/re
 # Extract the download URL for the .img.zip asset
 download_url=$(echo "$latest_release_data" | grep "browser_download_url.*img.zip" | cut -d '"' -f 4)
 
-# Download the file with a sanitized name
-filename=$(basename "$download_url")
-wget "$download_url" -O "$filename"
+# Download the zip file with the original name
+original_zip_filename=$(basename "$download_url")
+wget "$download_url" -O "$original_zip_filename"
 
-# Unzip the file
-unzip -o "$filename"
+# Unzip the file to extract the .img file
+unzip -o "$original_zip_filename"
 
-# Extract the .img file name from the zip archive
-IMAGE_NAME=$(basename "$filename" .zip)
+# Find the extracted .img file (assuming there's only one .img file in the zip)
+extracted_img_filename=$(ls | grep '\.img$')
+
+# Rename the extracted .img file to tomato64.img
+mv "$extracted_img_filename" tomato64.img
+
+# Define IMAGE_NAME as the renamed .img file
+IMAGE_NAME="tomato64.img"
 
 # Prompt for storage name
 STORAGE=$(whiptail --inputbox "Enter the storage name where the image should be imported (e.g., local, local-lvm, local-zfs):" 8 78 --title "Tomato64 Installation" 3>&1 1>&2 2>&3)
@@ -50,18 +56,16 @@ if [ -z "$DISK_VOLUME_ID" ]; then
 fi
 
 # Set VM disk
-# The format for the scsi0 parameter should be 'storage:volume', where 'storage' is the storage ID
-# and 'volume' is the volume name or identifier returned by the 'qm importdisk' command.
 qm set "$ID" --scsi0 "${STORAGE}:${DISK_VOLUME_ID}"
 
 # Create an EFI disk for the VM using the special syntax
 qm set "$ID" --efidisk0 "${STORAGE}:0"
 
 # Set boot order
-qm set "$ID" --boot c --bootdisk scsi0
+qm set "$ID" --boot order=scsi0
 
 # Clean up downloaded and extracted files
-rm -f "$filename" "$IMAGE_NAME"
+rm -f "$original_zip_filename" "$IMAGE_NAME"
 
 # Notify the user that the VM has been created
 echo "VM $ID Created."
