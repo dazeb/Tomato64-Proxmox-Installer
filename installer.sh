@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e # Exit immediately if a command exits with a non-zero status
 
 # Define color codes
 RED='\033[0;31m'
@@ -16,7 +17,9 @@ print_error() {
 }
 
 # Install unzip if it's not already installed
-apt-get update && apt-get install -y unzip whiptail
+if ! command -v unzip >/dev/null 2>&1; then
+    apt-get update && apt-get install -y unzip whiptail || print_error "Failed to install unzip and whiptail"
+fi
 
 # Display a notice to the user using whiptail
 whiptail --title "Important Notice" --msgbox "This script assumes you are using bridges, as they are supported in every scenario, but you may also opt for hardware passthrough.\n\nYou will also need at least 2 network interfaces to run Tomato64 as a router." 15 78
