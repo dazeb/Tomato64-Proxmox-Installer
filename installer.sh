@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# Define color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+# Function to print success message
+print_success() {
+    echo -e "${GREEN}$1${NC}"
+}
+
+# Function to print error message
+print_error() {
+    echo -e "${RED}$1${NC}"
+}
+
 # Install unzip if it's not already installed
 apt-get update && apt-get install -y unzip whiptail
 
@@ -14,7 +29,7 @@ ID=$(pvesh get /cluster/nextid)
 
 # Check if the VM already exists
 if qm status "$ID" &>/dev/null; then
-    echo "VM with ID $ID already exists. Please choose a different ID or remove the existing VM."
+    print_error "VM with ID $ID already exists. Please choose a different ID or remove the existing VM."
     exit 1
 fi
 
@@ -51,7 +66,7 @@ DISK_VOLUME_ID=$(qm importdisk "$ID" "$IMAGE_NAME" "$STORAGE" --format raw)
 
 # Check if the import was successful and we have a volume ID
 if [ -z "$DISK_VOLUME_ID" ]; then
-    echo "Failed to import disk image or capture volume ID."
+    print_error "Failed to import disk image or capture volume ID."
     exit 1
 fi
 
@@ -62,7 +77,12 @@ fi
 echo "Imported disk as ${STORAGE}:${DISK_VOLUME_ID}"
 
 # Attach the imported disk to the VM
-qm set "$ID" --scsi0 "${STORAGE}:${DISK_VOLUME_ID}"
+if qm set "$ID" --scsi0 "${STORAGE}:${DISK_VOLUME_ID}"; then
+    print_success "Disk attached successfully."
+else
+    print_error "Failed to attach disk."
+    exit 1
+fi
 
 # Create an EFI disk for the VM using the special syntax
 qm set "$ID" --efidisk0 "${STORAGE}:0"
@@ -74,7 +94,4 @@ qm set "$ID" --boot c --bootdisk scsi0
 rm -f "$original_zip_filename" "$IMAGE_NAME"
 
 # Notify the user that the VM has been created
-echo "VM $ID Created."
-
-# Start the VM
-qm start "$ID"
+print_success "VM $ID Created. Now add the second network card and bridge."
