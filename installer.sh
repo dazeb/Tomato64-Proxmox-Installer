@@ -55,14 +55,20 @@ if [ -z "$DISK_VOLUME_ID" ]; then
     exit 1
 fi
 
-# Set VM disk with the VirtIO SCSI Single controller
+# The volume ID should be in the format 'storage:vmid/volume'
+# For example, 'local-lvm:vm-100-disk-0'
+# If the storage is 'nvme-zfs', it might look like 'nvme-zfs:vm-100-disk-0'
+# Make sure the volume ID is correct and does not contain extra spaces or the word 'importing disk'
+echo "Imported disk as ${STORAGE}:${DISK_VOLUME_ID}"
+
+# Attach the imported disk to the VM
 qm set "$ID" --scsi0 "${STORAGE}:${DISK_VOLUME_ID}"
 
 # Create an EFI disk for the VM using the special syntax
 qm set "$ID" --efidisk0 "${STORAGE}:0"
 
-# Set boot order
-qm set "$ID" --boot order=scsi0
+# Set boot order to the SCSI disk
+qm set "$ID" --boot c --bootdisk scsi0
 
 # Clean up downloaded and extracted files
 rm -f "$original_zip_filename" "$IMAGE_NAME"
